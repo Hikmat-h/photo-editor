@@ -13,6 +13,7 @@
 		0E4D157F2236DB0B0003C5A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0E4D157E2236DB0B0003C5A7 /* Assets.xcassets */; };
 		0E4D15822236DB0B0003C5A7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0E4D15802236DB0B0003C5A7 /* LaunchScreen.storyboard */; };
 		0E4D15852236DB0B0003C5A7 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 0E4D15842236DB0B0003C5A7 /* main.m */; };
+		0E7F4BF722398AF3003C9619 /* PhotoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 0E7F4BF622398AF3003C9619 /* PhotoCell.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,8 @@
 		0E4D15812236DB0B0003C5A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		0E4D15832236DB0B0003C5A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0E4D15842236DB0B0003C5A7 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		0E7F4BF522398AF3003C9619 /* PhotoCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PhotoCell.h; sourceTree = "<group>"; };
+		0E7F4BF622398AF3003C9619 /* PhotoCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PhotoCell.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +70,8 @@
 				0E4D15802236DB0B0003C5A7 /* LaunchScreen.storyboard */,
 				0E4D15832236DB0B0003C5A7 /* Info.plist */,
 				0E4D15842236DB0B0003C5A7 /* main.m */,
+				0E7F4BF522398AF3003C9619 /* PhotoCell.h */,
+				0E7F4BF622398AF3003C9619 /* PhotoCell.m */,
 			);
 			path = "photo-editor";
 			sourceTree = "<group>";
@@ -141,6 +146,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E7F4BF722398AF3003C9619 /* PhotoCell.m in Sources */,
 				0E4D157A2236DB0A0003C5A7 /* ViewController.m in Sources */,
 				0E4D15852236DB0B0003C5A7 /* main.m in Sources */,
 				0E4D15772236DB0A0003C5A7 /* AppDelegate.m in Sources */,

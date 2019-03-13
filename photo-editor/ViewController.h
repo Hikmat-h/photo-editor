@@ -8,8 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
+@interface ViewController : UIViewController <UIImagePickerControllerDelegate, UINavigationControllerDelegate, UITableViewDelegate, UITableViewDataSource>
 
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (weak, nonatomic) IBOutlet UIImageView *chosenImageV;
+- (IBAction)onChooseBtn:(id)sender;
+@property (weak, nonatomic) IBOutlet UIButton *chooseBtn;
+- (IBAction)onRotate:(id)sender;
+- (IBAction)onBlackEffect:(id)sender;
+- (IBAction)onMirror:(id)sender;
 
 @end
 
