@@ -10,6 +10,10 @@
 
 @interface ViewController : UIViewController <UIImagePickerControllerDelegate, UINavigationControllerDelegate, UITableViewDelegate, UITableViewDataSource>
 
+@property (weak, nonatomic) IBOutlet UIView *chooseView;
+@property (weak, nonatomic) IBOutlet UIButton *rotateBtn;
+@property (weak, nonatomic) IBOutlet UIButton *blackEffectBtn;
+@property (weak, nonatomic) IBOutlet UIButton *mirrorBtn;
 @property (weak, nonatomic) IBOutlet UITableView *tableView;
 @property (weak, nonatomic) IBOutlet UIImageView *chosenImageV;
 - (IBAction)onChooseBtn:(id)sender;

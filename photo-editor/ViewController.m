@@ -33,6 +33,9 @@
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.rowHeight = 250;
+    self.rotateBtn.layer.cornerRadius=3;
+    self.blackEffectBtn.layer.cornerRadius=3;
+    self.mirrorBtn.layer.cornerRadius=3;
 }
 
 
@@ -45,7 +48,6 @@
     NSURL *imageURL = [info objectForKey:UIImagePickerControllerImageURL];
     NSData *imgData=[NSData dataWithContentsOfURL:imageURL];
     UIImage *img=[UIImage imageWithData:imgData];
-    
     CGSize imageSize=CGSizeMake(0, 0);
     // make the smaller part equal to square size and change the greater part in the same ratio for cropping
     if(img.size.width<=img.size.height)
@@ -83,38 +85,60 @@
     UIGraphicsEndImageContext();
     return destImage;
 }
+
 - (IBAction)onRotate:(id)sender {
+    UIImage *img = [self rotateRight:self.chosenImageV.image];
+    [self.resultArray addObject:img];
+    [self.tableView reloadData];
 }
 
 - (IBAction)onBlackEffect:(id)sender {
-    CIContext *imageContext=[CIContext contextWithOptions:nil];
-    CIImage *selected = [[CIImage alloc] initWithImage:self.chosenImageV.image];
-    CIFilter *filter = [CIFilter filterWithName:@"CIPhotoEffectMono" keysAndValues:kCIInputImageKey, selected, nil];
-    CIImage *result = [filter valueForKey:@"outputImage"];
-    CGImageRef cgImageRef = [imageContext createCGImage:result fromRect:[result extent]];
-    UIImage *img = [UIImage imageWithCGImage:cgImageRef];
+    UIImage *img = [self blackMonoEffect:self.chosenImageV.image];
     [self.resultArray addObject:img];
     [self.tableView reloadData];
 }
 
 - (IBAction)onMirror:(id)sender {
-    UIImage *flippedImage=[UIImage imageWithCGImage:self.chosenImageV.image.CGImage scale:self.chosenImageV.image.scale orientation:UIImageOrientationUpMirrored];
-    [self.resultArray addObject:flippedImage];
+    UIImage *flippedImg = [self mirror:self.chosenImageV.image];
+    [self.resultArray addObject:flippedImg];
     [self.tableView reloadData];
 }
 
+-(UIImage*)rotateRight:(UIImage *)img {
+    UIImage *rotatedImg = [UIImage imageWithCGImage:img.CGImage scale:img.scale orientation:UIImageOrientationRight];
+    return rotatedImg;
+}
+
+-(UIImage*)blackMonoEffect: (UIImage*)img {
+    CIContext *imageContext = [CIContext contextWithOptions:nil];
+    CIImage *selected = [[CIImage alloc] initWithImage:img];
+    CIFilter *filter = [CIFilter filterWithName:@"CIPhotoEffectMono" keysAndValues:kCIInputImageKey, selected, nil];
+    CIImage *result = [filter valueForKey:@"outputImage"];
+    CGImageRef cgImageRef = [imageContext createCGImage:result fromRect:[result extent]];
+    UIImage *resultImg = [UIImage imageWithCGImage:cgImageRef];
+    return resultImg;
+}
+
+-(UIImage*)mirror:(UIImage*)img {
+    UIImage *flippedImage = [UIImage imageWithCGImage:img.CGImage scale:img.scale orientation:UIImageOrientationUpMirrored];
+    return flippedImage;
+}
+
+//------tableView
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
     return 1;
 }
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section;{
     return self.resultArray.count;
 }
+
 -(UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"photoCell"];
     
-    PhotoCell *photoCell=(PhotoCell *)cell;
-    UIImage *img=(UIImage *)[self.resultArray objectAtIndex:indexPath.row];
-    photoCell.resultImageV.image=img;
+    PhotoCell *photoCell = (PhotoCell *)cell;
+    UIImage *img = (UIImage *)[self.resultArray objectAtIndex:indexPath.row];
+    photoCell.resultImageV.image = img;
     return cell;
 }
 
