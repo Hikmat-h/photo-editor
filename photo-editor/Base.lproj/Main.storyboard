@@ -41,7 +41,7 @@
                                         <rect key="frame" x="55" y="119" width="150" height="2"/>
                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
                                     </progressView>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="100%" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="H84-Ge-xja">
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="0%" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="H84-Ge-xja">
                                         <rect key="frame" x="107" y="129" width="47" height="20"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="16"/>
@@ -79,10 +79,23 @@
                                                     <rect key="frame" x="67" y="3" width="240" height="240"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 </imageView>
+                                                <progressView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="750" fixedFrame="YES" progress="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="B2l-lf-qQU">
+                                                    <rect key="frame" x="67" y="123" width="240" height="2"/>
+                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
+                                                </progressView>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="0%" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="eCP-Nh-SLW">
+                                                    <rect key="frame" x="164" y="133" width="47" height="20"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                                    <color key="textColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
                                             </subviews>
                                         </tableViewCellContentView>
                                         <color key="backgroundColor" red="0.92143100499999997" green="0.92145264149999995" blue="0.92144101860000005" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <connections>
+                                            <outlet property="progPerct" destination="eCP-Nh-SLW" id="QPR-3y-Wyh"/>
+                                            <outlet property="progressView" destination="B2l-lf-qQU" id="Vqq-TO-Yzi"/>
                                             <outlet property="resultImageV" destination="aSD-LD-HTW" id="xbk-FE-5o9"/>
                                         </connections>
                                     </tableViewCell>
@@ -122,6 +135,8 @@
                         <outlet property="chooseBtn" destination="BgW-BE-gh7" id="KYP-yA-Zqd"/>
                         <outlet property="chooseView" destination="8th-Db-8Ba" id="yy9-Yr-0tP"/>
                         <outlet property="chosenImageV" destination="FEn-m5-c6e" id="VAN-Qg-jbR"/>
+                        <outlet property="downloadPerct" destination="H84-Ge-xja" id="Bwq-nh-bSZ"/>
+                        <outlet property="downloadProgress" destination="2Dp-Uu-pfg" id="f4Z-hV-EKT"/>
                         <outlet property="mirrorBtn" destination="ccq-Cx-iVe" id="beh-qT-Rl3"/>
                         <outlet property="rotateBtn" destination="Tc1-wh-tlq" id="Nop-w7-uZw"/>
                         <outlet property="tableView" destination="AEz-oP-8n2" id="vGZ-dH-q8Q"/>

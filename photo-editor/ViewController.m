@@ -15,7 +15,10 @@
 @interface ViewController ()
 @property (strong) UIImagePickerController *imagePicker;
 @property (strong, nonatomic) NSMutableArray *resultArray;
-@property float squareSize;
+//@property (strong, nonatomic) NSMutableArray *timerArray;
+//@property float time;
+//@property float totalTime;
+//@property float progress;
 @end
 
 @implementation ViewController
@@ -28,15 +31,38 @@
     self.imagePicker.modalPresentationStyle = UIModalPresentationCurrentContext;
     self.imagePicker.allowsEditing = YES;
     self.imagePicker.mediaTypes = @[(NSString*)kUTTypePNG, (NSString*)kUTTypeJPEG, (NSString*)kUTTypeImage];
-    self.squareSize = self.chosenImageV.frame.size.width;  // = height
     [self.chooseBtn setTitle:@"Choose photo" forState:UIControlStateNormal];
     self.resultArray = [NSMutableArray array];
+//    self.timerArray = [NSMutableArray array];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.rowHeight = 250;
     self.rotateBtn.layer.cornerRadius=4;
     self.blackEffectBtn.layer.cornerRadius=4;
     self.mirrorBtn.layer.cornerRadius=4;
+    self.downloadProgress.hidden = YES;
+    self.downloadPerct.hidden = YES;
+    [[NSNotificationCenter defaultCenter]
+     addObserver:self
+     selector:@selector(applicationDidEnterBackground:)
+     name:UIApplicationDidEnterBackgroundNotification
+     object:[UIApplication sharedApplication]];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    int count = (int)[defaults integerForKey:@"arrayCount"];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        for(int i=0; i<count; i++)
+        {
+            NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
+            NSData *data = [NSData dataWithContentsOfFile:filePath];
+            UIImage *image = [UIImage imageWithData:data];
+            NSLog(@"image %d has orientation ---%ld", i, (long)image.imageOrientation);
+            [self.resultArray addObject:image];
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.tableView reloadData];
+        });
+    });
 }
 
 - (IBAction)onChooseBtn:(id)sender {
@@ -51,7 +77,8 @@
         [self openURL];
     }];
     UIAlertAction *cancel=[UIAlertAction actionWithTitle:@"cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *act){
-        [self.chooseBtn setTitle:@"Choose photo" forState:UIControlStateNormal];
+        if(self.chosenImageV.image==nil)
+            [self.chooseBtn setTitle:@"Choose photo" forState:UIControlStateNormal];
     }];
     [alert addAction:action1];
     [alert addAction:action2];
@@ -83,21 +110,22 @@
         urlField.keyboardType=UIKeyboardTypeURL;
     }];
     UIAlertAction *ok = [UIAlertAction actionWithTitle:@"ok" style:UIAlertActionStyleDefault handler:^(UIAlertAction *act) {
-        
+        self.downloadProgress.progress=0;
+        self.downloadPerct.text=@"0%";
+        [self.downloadProgress setHidden:NO];
+        self.downloadPerct.hidden = NO;
+        NSURLSessionConfiguration *sessionconfig = [NSURLSessionConfiguration defaultSessionConfiguration];
+        NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionconfig delegate:self delegateQueue:nil];
+        NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithURL:[NSURL URLWithString:[alert.textFields firstObject].text]];
+        [downloadTask resume];
     }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"cancel" style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *act){
+        if(self.chosenImageV.image==nil)
+            [self.chooseBtn setTitle:@"Choose photo" forState:UIControlStateNormal];
+    }];
     [alert addAction:ok];
     [alert addAction:cancel];
-    //    __block UIImage *image;
-    //    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-    //       NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageURL]];
-    //        if (data==nil)
-    //        {
-    //            return;
-    //        }
-    //        image = [UIImage imageWithData:data];
-    //    });
-    //    return image;
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey,id> *)info{
@@ -115,20 +143,16 @@
 }
 
 -(UIImage* )makeSquareImg: (UIImage *) img{
-    CGSize imageSize=CGSizeMake(0, 0);
-    // make the smaller part equal to square size and change the greater part in the same ratio for cropping
+    CGRect cropRect;
+    //square crop image with respect to the smallest size
     if(img.size.width<=img.size.height)
     {
-        imageSize.width = self.squareSize;
-        imageSize.height = img.size.height*self.squareSize/img.size.width; //in the same ratio
+        cropRect = CGRectMake(0, (img.size.height-img.size.width)/2, img.size.width, img.size.width);
     }
     else
     {
-        imageSize.width = img.size.width*self.squareSize/img.size.height;
-        imageSize.height = self.squareSize;
+        cropRect = CGRectMake((img.size.width-img.size.height)/2, 0, img.size.height, img.size.height);
     }
-    img=[self imageWithImage:img convertToSize:imageSize];
-    CGRect cropRect = CGRectMake(fabs(self.squareSize-img.size.width)/2, fabs(self.squareSize-img.size.height)/2, self.squareSize, self.squareSize);
     return [self croppIngimageByImageName:img toRect:cropRect];
 }
 
@@ -137,15 +161,6 @@
     CGImageRef imageRef = CGImageCreateWithImageInRect([imageToCrop CGImage], rect);
     UIImage *cropped = [UIImage imageWithCGImage:imageRef];
     return cropped;
-}
-
-- (UIImage *)imageWithImage:(UIImage *)image convertToSize:(CGSize)size
-{
-    UIGraphicsBeginImageContext(size);
-    [image drawInRect:CGRectMake(0, 0, size.width, size.height)];
-    UIImage *destImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return destImage;
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
@@ -157,7 +172,12 @@
     {
         UIImage *img = [self rotateRight:self.chosenImageV.image];
         [self.resultArray addObject:img];
+//        [self.tableView setContentOffset:CGPointMake(0, self.tableView.contentSize.height-self.tableView.frame.size.height) animated:YES];
         [self.tableView reloadData];
+        [self.tableView
+         scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
+                                                   inSection:0]
+         atScrollPosition:UITableViewScrollPositionBottom animated:YES];
     }
 }
 
@@ -165,8 +185,17 @@
     if(self.chosenImageV.image)
     {
         UIImage *img = [self blackMonoEffect:self.chosenImageV.image];
+        //if image was mirrored
+        if(self.chosenImageV.image.imageOrientation==UIImageOrientationUpMirrored)
+        {
+            img = [self mirror:img];
+        }
         [self.resultArray addObject:img];
         [self.tableView reloadData];
+        [self.tableView
+         scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
+                                                   inSection:0]
+         atScrollPosition:UITableViewScrollPositionBottom animated:YES];
     }
 }
 
@@ -176,6 +205,10 @@
         UIImage *flippedImg = [self mirror:self.chosenImageV.image];
         [self.resultArray addObject:flippedImg];
         [self.tableView reloadData];
+        [self.tableView
+         scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
+                                                   inSection:0]
+         atScrollPosition:UITableViewScrollPositionBottom animated:YES];
     }
 }
 
@@ -219,7 +252,63 @@ static inline double radians (double degrees)
     return flippedImage;
 }
 
-//------tableView
+- (NSString *)documentsPathForFileName:(NSString *)name
+{
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask, YES);
+    NSString *documentsPath = [paths objectAtIndex:0];
+    
+    return [documentsPath stringByAppendingPathComponent:name];
+}
+
+-(void)applicationDidEnterBackground:(NSNotification *)notify{
+    //delete old images beginning from new image last index+1
+    //other images will be overwritten
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    int oldImagesCount = (int)[defaults integerForKey:@"arrayCount"];
+    [defaults setInteger:[self.resultArray count] forKey:@"arrayCount"];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSError *error;
+        for (int i=(int)self.resultArray.count; i<oldImagesCount; i++)
+        {
+            NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
+            BOOL success = [fileManager removeItemAtPath:filePath error:&error];
+            if(success)
+            NSLog(@"--> file is deleted--->%@",filePath);
+        }
+        for (int i=0; i<self.resultArray.count; i++)
+        {
+            UIImage *image = [self.resultArray objectAtIndex:i];
+            NSData *JPEGdata = UIImageJPEGRepresentation(image, 0.7);
+            NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
+            [JPEGdata writeToFile:filePath atomically:YES];
+        }
+    });
+}
+
+//-(void) updateTimer:(NSTimer *)timer
+//{
+//    if(self.time >= self.totalTime)
+//    {
+//        dispatch_async(dispatch_get_main_queue(), ^{
+//            self.resultImageV.hidden = NO;
+//            [self.progressView setHidden:YES];
+//            self.progPerct.hidden = YES;
+//        });
+//        [timer invalidate];
+//    }
+//    else
+//    {
+//        self.time += 0.01;
+//        self.progress = self.time/self.totalTime;
+//        dispatch_async(dispatch_get_main_queue(), ^{
+//            self.progressView.progress = self.progress;
+//            self.progPerct.text = [NSString stringWithFormat:@"%0.0f%%", self.progress*100];
+//        });
+//    }
+//}
+
+#pragma mark - tableView
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
     return 1;
 }
@@ -232,19 +321,26 @@ static inline double radians (double degrees)
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"photoCell"];
     
     PhotoCell *photoCell = (PhotoCell *)cell;
+//    float rand = arc4random_uniform(6);
+//    self.time=0.0;
+//    self.totalTime = rand/30;
+//    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//        NSTimer *timer=[NSTimer scheduledTimerWithTimeInterval:0.3f target:self selector:@selector(updateTimer:) userInfo:nil repeats:YES];
+//        [self.timerArray addObject:timer];
+//    });
     UIImage *img = (UIImage *)[self.resultArray objectAtIndex:indexPath.row];
     photoCell.resultImageV.image = img;
     return cell;
 }
 
 -(void) tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
-    //    PhotoCell *photo=[tableView cellForRowAtIndexPath:indexPath];
     UIImage *img = [self.resultArray objectAtIndex:indexPath.row];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"choose actioin" message:@"" preferredStyle:UIAlertControllerStyleActionSheet];
     UIAlertAction *save = [UIAlertAction actionWithTitle:@"save" style:UIAlertActionStyleDefault handler:^(UIAlertAction *act){
         [self saveImage:img];
     }];
     UIAlertAction *edit = [UIAlertAction actionWithTitle:@"edit" style:UIAlertActionStyleDefault handler:^(UIAlertAction *act){
+        [self.chooseBtn setTitle:@"" forState:UIControlStateNormal];
         self.chosenImageV.image=img;
     }];
     UIAlertAction *delete = [UIAlertAction actionWithTitle:@"delete" style:UIAlertActionStyleDefault handler:^(UIAlertAction *act){
@@ -263,53 +359,59 @@ static inline double radians (double degrees)
     UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil);
 }
 
-//- (void)URLSession:(nonnull NSURLSession *)session downloadTask:(nonnull NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(nonnull NSURL *)location {
-//    <#code#>
-//}
-//
-//- (void)encodeWithCoder:(nonnull NSCoder *)aCoder {
-//    <#code#>
-//}
-//
-//- (void)traitCollectionDidChange:(nullable UITraitCollection *)previousTraitCollection {
-//    <#code#>
-//}
-//
-//- (void)preferredContentSizeDidChangeForChildContentContainer:(nonnull id<UIContentContainer>)container {
-//    <#code#>
-//}
-//
-//- (CGSize)sizeForChildContentContainer:(nonnull id<UIContentContainer>)container withParentContainerSize:(CGSize)parentSize {
-//    <#code#>
-//}
-//
-//- (void)systemLayoutFittingSizeDidChangeForChildContentContainer:(nonnull id<UIContentContainer>)container {
-//    <#code#>
-//}
-//
-//- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(nonnull id<UIViewControllerTransitionCoordinator>)coordinator {
-//    <#code#>
-//}
-//
-//- (void)willTransitionToTraitCollection:(nonnull UITraitCollection *)newCollection withTransitionCoordinator:(nonnull id<UIViewControllerTransitionCoordinator>)coordinator {
-//    <#code#>
-//}
-//
-//- (void)didUpdateFocusInContext:(nonnull UIFocusUpdateContext *)context withAnimationCoordinator:(nonnull UIFocusAnimationCoordinator *)coordinator {
-//    <#code#>
-//}
-//
-//- (void)setNeedsFocusUpdate {
-//    <#code#>
-//}
-//
-//- (BOOL)shouldUpdateFocusInContext:(nonnull UIFocusUpdateContext *)context {
-//    <#code#>
-//}
-//
-//- (void)updateFocusIfNeeded {
-//    <#code#>
-//}
+#pragma mark - session
+- (void)URLSession:(nonnull NSURLSession *)session downloadTask:(nonnull NSURLSessionDownloadTask *)downloadTask didFinishDownloadingToURL:(nonnull NSURL *)location {
+    NSData *data = [NSData dataWithContentsOfURL:location];
+    
+    
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        
+//        [self.downloadProgress setHidden:YES];
+//        self.downloadPerct.hidden = YES;
+        UIImage *image = [UIImage imageWithData:data];
+        if(image==nil)
+        {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Error" message:@"url does not contain photo" preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertAction *ok = [UIAlertAction actionWithTitle:@"ok" style:UIAlertActionStyleCancel handler:nil];
+            [alert addAction:ok];
+            [self presentViewController:alert animated:YES completion:nil];
+        }
+        else
+        {
+            [self.chosenImageV setImage:[self makeSquareImg:image]];
+            [self saveImage:image];
+        }
+        
+    });
+}
 
+-(void) URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite{
+    float progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
+    
+    
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        
+        [self.downloadProgress setProgress:progress];
+        self.downloadPerct.text=[NSString stringWithFormat:@"%0.0f%%", progress*100];
+        
+    });
+}
+
+-(void) URLSession:(NSURLSession *)session didBecomeInvalidWithError:(NSError *)error {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.downloadProgress setHidden:YES];
+        self.downloadPerct.hidden = YES;
+    });
+    NSLog(@"error is--%@", error);
+}
+-(void) URLSession:(NSURLSession *)session task:(nonnull NSURLSessionTask *)task didCompleteWithError:(nullable NSError *)error{
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [self.downloadProgress setHidden:YES];
+      self.downloadPerct.hidden = YES;
+    });
+    NSLog(@"error is--%@", error);
+}
 @end
 

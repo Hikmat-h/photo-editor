@@ -21,6 +21,8 @@
 - (IBAction)onRotate:(id)sender;
 - (IBAction)onBlackEffect:(id)sender;
 - (IBAction)onMirror:(id)sender;
-
+@property (weak, nonatomic) IBOutlet UIProgressView *downloadProgress;
+@property (weak, nonatomic) IBOutlet UILabel *downloadPerct;
+@property (strong, nonatomic) UIProgressView *progressView;
 @end
 
