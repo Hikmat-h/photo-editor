@@ -12,13 +12,19 @@
 #import <CoreImage/CoreImage.h>
 #import "PhotoCell.h"
 
+@interface Timer : NSObject
+@property float time;
+@property float totalTime;
+@property (strong, nonatomic) NSIndexPath *forIndex;
+@end
+
+@implementation Timer
+@end
+
 @interface ViewController ()
 @property (strong) UIImagePickerController *imagePicker;
 @property (strong, nonatomic) NSMutableArray *resultArray;
-//@property (strong, nonatomic) NSMutableArray *timerArray;
-//@property float time;
-//@property float totalTime;
-//@property float progress;
+@property (strong, nonatomic) NSMutableArray *activeTimerIndexArray;
 @end
 
 @implementation ViewController
@@ -33,7 +39,7 @@
     self.imagePicker.mediaTypes = @[(NSString*)kUTTypePNG, (NSString*)kUTTypeJPEG, (NSString*)kUTTypeImage];
     [self.chooseBtn setTitle:@"Choose photo" forState:UIControlStateNormal];
     self.resultArray = [NSMutableArray array];
-//    self.timerArray = [NSMutableArray array];
+    self.activeTimerIndexArray = [NSMutableArray array];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.rowHeight = 250;
@@ -47,6 +53,13 @@
      selector:@selector(applicationDidEnterBackground:)
      name:UIApplicationDidEnterBackgroundNotification
      object:[UIApplication sharedApplication]];
+    
+    [[NSNotificationCenter defaultCenter]
+     addObserver:self
+     selector:@selector(appDidQuit:)
+     name:UIApplicationWillTerminateNotification
+     object:[UIApplication sharedApplication]];
+    
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     int count = (int)[defaults integerForKey:@"arrayCount"];
     
@@ -56,8 +69,8 @@
             NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
             NSData *data = [NSData dataWithContentsOfFile:filePath];
             UIImage *image = [UIImage imageWithData:data];
-            NSLog(@"image %d has orientation ---%ld", i, (long)image.imageOrientation);
-            [self.resultArray addObject:image];
+            if(image!=nil)
+                [self.resultArray addObject:image];
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             [self.tableView reloadData];
@@ -167,12 +180,23 @@
     [picker dismissViewControllerAnimated:YES completion:NULL];
 }
 
+-(void)setTimerForLastIndex{
+    float rand = 5 + arc4random_uniform(26);
+    Timer *timerInfo = [[Timer alloc] init];
+    timerInfo.time = 0.0;
+    timerInfo.totalTime = rand/50;
+    timerInfo.forIndex = [NSIndexPath indexPathForRow:self.resultArray.count-1 inSection:0];
+    [self.activeTimerIndexArray addObject:timerInfo.forIndex];
+    NSTimer *timer = [NSTimer timerWithTimeInterval:0.5f target:self selector:@selector(updateTimer:) userInfo:timerInfo repeats:YES];
+    [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
+}
+
 - (IBAction)onRotate:(id)sender {
     if(self.chosenImageV.image)
     {
         UIImage *img = [self rotateRight:self.chosenImageV.image];
         [self.resultArray addObject:img];
-//        [self.tableView setContentOffset:CGPointMake(0, self.tableView.contentSize.height-self.tableView.frame.size.height) animated:YES];
+        [self setTimerForLastIndex];
         [self.tableView reloadData];
         [self.tableView
          scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
@@ -191,6 +215,7 @@
             img = [self mirror:img];
         }
         [self.resultArray addObject:img];
+        [self setTimerForLastIndex];
         [self.tableView reloadData];
         [self.tableView
          scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
@@ -204,6 +229,7 @@
     {
         UIImage *flippedImg = [self mirror:self.chosenImageV.image];
         [self.resultArray addObject:flippedImg];
+        [self setTimerForLastIndex];
         [self.tableView reloadData];
         [self.tableView
          scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:self.resultArray.count-1
@@ -286,27 +312,61 @@ static inline double radians (double degrees)
     });
 }
 
-//-(void) updateTimer:(NSTimer *)timer
-//{
-//    if(self.time >= self.totalTime)
-//    {
-//        dispatch_async(dispatch_get_main_queue(), ^{
-//            self.resultImageV.hidden = NO;
-//            [self.progressView setHidden:YES];
-//            self.progPerct.hidden = YES;
-//        });
-//        [timer invalidate];
-//    }
-//    else
-//    {
-//        self.time += 0.01;
-//        self.progress = self.time/self.totalTime;
-//        dispatch_async(dispatch_get_main_queue(), ^{
-//            self.progressView.progress = self.progress;
-//            self.progPerct.text = [NSString stringWithFormat:@"%0.0f%%", self.progress*100];
-//        });
-//    }
-//}
+-(void)appDidQuit:(NSNotification *)notify{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    int oldImagesCount = (int)[defaults integerForKey:@"arrayCount"];
+    [defaults setInteger:[self.resultArray count] forKey:@"arrayCount"];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSError *error;
+        for (int i=(int)self.resultArray.count; i<oldImagesCount; i++)
+        {
+            NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
+            BOOL success = [fileManager removeItemAtPath:filePath error:&error];
+            if(success)
+                NSLog(@"--> file is deleted--->%@",filePath);
+        }
+        for (int i=0; i<self.resultArray.count; i++)
+        {
+            UIImage *image = [self.resultArray objectAtIndex:i];
+            NSData *JPEGdata = UIImageJPEGRepresentation(image, 0.7);
+            NSString *filePath = [self documentsPathForFileName:[NSString stringWithFormat:@"image%d", i]];
+            [JPEGdata writeToFile:filePath atomically:YES];
+        }
+    });
+    NSLog(@"app is about to quit");
+}
+
+-(void) updateTimer:(NSTimer *)timer
+{
+    Timer *timerInfo = timer.userInfo;
+    NSIndexPath *index = timerInfo.forIndex;
+    PhotoCell *cell = [self.tableView cellForRowAtIndexPath:index];
+    if(timerInfo.time >= timerInfo.totalTime)
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIProgressView *prg = [cell viewWithTag:11];
+            [prg removeFromSuperview];
+            [cell.resultImageV setHidden:NO];
+        });
+        [timer invalidate];
+        //no longer active timer
+        [self.activeTimerIndexArray removeObject:timerInfo.forIndex];
+    }
+    else
+    {
+        timerInfo.time += 0.01;
+        float progress = timerInfo.time/timerInfo.totalTime;
+        dispatch_async(dispatch_get_main_queue(), ^{
+                UIProgressView *prg = [cell viewWithTag:11];
+                prg.progress = progress;
+        });
+    }
+}
+
+-(void) saveImage: (UIImage *)img {
+    UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil);
+}
 
 #pragma mark - tableView
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
@@ -321,13 +381,15 @@ static inline double radians (double degrees)
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"photoCell"];
     
     PhotoCell *photoCell = (PhotoCell *)cell;
-//    float rand = arc4random_uniform(6);
-//    self.time=0.0;
-//    self.totalTime = rand/30;
-//    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-//        NSTimer *timer=[NSTimer scheduledTimerWithTimeInterval:0.3f target:self selector:@selector(updateTimer:) userInfo:nil repeats:YES];
-//        [self.timerArray addObject:timer];
-//    });
+    //if there is active timer
+    if([self.activeTimerIndexArray containsObject:indexPath]){
+        [photoCell.resultImageV setHidden:YES];
+        
+        UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
+        progressView.frame = CGRectMake(photoCell.resultImageV.frame.origin.x, photoCell.resultImageV.frame.size.height/2, photoCell.resultImageV.frame.size.width, photoCell.resultImageV.frame.size.height);
+        [progressView setTag:11];
+            [photoCell.contentView addSubview:progressView];
+    }
     UIImage *img = (UIImage *)[self.resultArray objectAtIndex:indexPath.row];
     photoCell.resultImageV.image = img;
     return cell;
@@ -347,16 +409,12 @@ static inline double radians (double degrees)
         [self.resultArray removeObjectAtIndex:indexPath.row];
         [self.tableView reloadData];
     }];
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Save" style:UIAlertActionStyleCancel handler:nil];
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"cancel" style:UIAlertActionStyleCancel handler:nil];
     [alert addAction:save];
     [alert addAction:edit];
     [alert addAction:delete];
     [alert addAction:cancel];
     [self presentViewController:alert animated:YES completion:nil];
-}
-
--(void) saveImage: (UIImage *)img {
-    UIImageWriteToSavedPhotosAlbum(img, nil, nil, nil);
 }
 
 #pragma mark - session
@@ -406,6 +464,7 @@ static inline double radians (double degrees)
     });
     NSLog(@"error is--%@", error);
 }
+
 -(void) URLSession:(NSURLSession *)session task:(nonnull NSURLSessionTask *)task didCompleteWithError:(nullable NSError *)error{
     dispatch_async(dispatch_get_main_queue(), ^{
       [self.downloadProgress setHidden:YES];
