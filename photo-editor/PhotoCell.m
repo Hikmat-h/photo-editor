@@ -2,7 +2,7 @@
 //  PhotoCell.m
 //  photo-editor
 //
-//  Created by Hikmat Habibullaev on 3/14/19.
+//  Created by Hikmat Habibullaev on 4/17/19.
 //  Copyright © 2019 Hikmat Habibullaev. All rights reserved.
 //
 
@@ -12,6 +12,7 @@
 
 - (void)awakeFromNib {
     [super awakeFromNib];
+    // Initialization code
 }
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
